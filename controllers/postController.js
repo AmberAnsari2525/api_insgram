@@ -44,22 +44,50 @@ exports.createPost = async (req, res) => {
     }
 };
 
-//get all post
+// get all post
+// get all post
+// get all post
 exports.getPosts = async (req, res) => {
     console.log("GET /api/posts hit");
     try {
-        const userId = req.user.id;
+        const userId = req.user.id; // The ID of the user requesting the posts
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
         const offset = (page - 1) * limit;
 
+        // Fetch current user's privacy setting
+        const currentUser = await User.findByPk(userId);
+        if (!currentUser) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        let whereCondition = {};
+
+        if (currentUser.isPrivate) {
+            // Get followers' user IDs
+            const followers = await User.findAll({
+                where: {
+                    id: { [Op.ne]: userId }, // Exclude current user
+                    // Assuming you have a UserFollows table to check relationships
+                    [Op.or]: [{ id: { [Op.in]: sequelize.literal(`(SELECT followedId FROM UserFollows WHERE followerId = ${userId})`) } }]
+                },
+                attributes: ['id']
+            });
+
+            const followerIds = followers.map(follower => follower.id);
+            whereCondition = { user_id: { [Op.in]: followerIds } }; // Only include posts from followed users
+        } else {
+            // If the user is public, retrieve all posts
+            whereCondition = {};
+        }
+
         const { count, rows: posts } = await Post.findAndCountAll({
+            where: whereCondition,
             limit: limit,
             offset: offset
         });
 
-        const formattedPosts = [];
-        for (const post of posts) {
+        const formattedPosts = posts.map(post => {
             let mediaLinks = [];
             try {
                 mediaLinks = post.media_link ? JSON.parse(post.media_link) : [];
@@ -70,7 +98,7 @@ exports.getPosts = async (req, res) => {
 
             const fullMediaLinks = mediaLinks.map(link => `${req.protocol}://${req.get('host')}/uploads/${link}`);
 
-            formattedPosts.push({
+            return {
                 id: post.id,
                 user_id: post.user_id,
                 post_type: post.post_type,
@@ -80,8 +108,8 @@ exports.getPosts = async (req, res) => {
                 updatedAt: post.updatedAt,
                 username: 'Unknown User', // Placeholder for debugging
                 like_count: 0 // Placeholder for debugging
-            });
-        }
+            };
+        });
 
         const totalPages = Math.ceil(count / limit);
         res.status(200).json({
@@ -98,6 +126,7 @@ exports.getPosts = async (req, res) => {
         });
     }
 };
+
 
 //get post by id
 
@@ -151,22 +180,24 @@ exports.getPostById = async (req, res) => {
 
 // Get posts by user ID
 exports.getPostsByUserId = async (req, res) => {
-    const { user_id } = req.params;
+    const { user_id } = req.params; // Assuming user_id is passed in the URL params
 
     try {
+        // Find all posts where the user_id matches the provided ID
         const posts = await Post.findAll({ where: { user_id } });
 
+        // If no posts are found, return a 404 status
         if (posts.length === 0) {
             return res.status(404).json({ message: 'No posts found for this user' });
         }
 
+        // Return the found posts
         res.status(200).json(posts);
     } catch (error) {
         console.error("Error fetching user's posts:", error);
         res.status(500).json({ message: 'Failed to retrieve posts', error });
     }
 };
-
 // Update a post by ID
 
 exports.updatePost = async (req, res) => {

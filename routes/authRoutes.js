@@ -1,6 +1,6 @@
 //auth routes
 const express = require('express');
-const { register, login, getProfile, getUsers ,getProfileById,updateUserProfile,changePassword} = require('../controllers/authController');
+const { register, login, getProfile, getUsers ,getProfileById,updateUserProfile,changePassword,setAccountPrivacy} = require('../controllers/authController');
 const authMiddleware = require('../middlewares/authMiddleware');
 
 const router = express.Router();
@@ -29,6 +29,8 @@ router.put('/update', authMiddleware,upload.single('image'), updateUserProfile);
 router.get('/users', authMiddleware, getUsers);
 router.post('/change-password', authMiddleware,changePassword);
 router.get('/users/:userId/profile', authMiddleware,getProfileById);
+router.put('/:userId/privacy', authMiddleware, setAccountPrivacy);
+
 
 module.exports = router;
 

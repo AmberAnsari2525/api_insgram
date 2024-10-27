@@ -1,5 +1,3 @@
-// models/UserFollows.js
-
 module.exports = (sequelize, DataTypes) => {
     const UserFollows = sequelize.define('UserFollows', {
         id: {

@@ -6,6 +6,8 @@ const commentRoutes = require('./routes/commnetRoutes');
 const likeRoutes = require('./routes/likeRoutes');
 const shareRoutes = require('./routes/shareRoutes');
 const followRoutes = require('./routes/followRoutes');
+const notificationRoutes = require('./routes/notificationsRoutes');
+
 require('dotenv').config();
 const app = express();
 
@@ -20,6 +22,8 @@ app.use('/api', commentRoutes);
 app.use('/api', likeRoutes);
 app.use('/api', shareRoutes);
 app.use('/api', followRoutes);
+app.use('/api', notificationRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 const PORT = process.env.PORT || 3000;
 

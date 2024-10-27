@@ -269,7 +269,49 @@ const changePassword = async (req, res) => {
         res.status(500).json({message: 'Server error', error: error.message}); // Include error message
     }
 };
+// Set account privacy
+const setAccountPrivacy = async (req, res) => {
+    const userId = req.params.userId;
 
+    if (!userId) {
+        return res.status(400).json({ message: 'User ID is required' });
+    }
+
+    const { privacy } = req.body;
+
+    // Log the received value for debugging
+    console.log('Received privacy:', privacy, 'Type:', typeof privacy);
+
+    // Convert string to boolean if necessary
+    const isPrivateBool = (privacy === 'true') || (privacy === true);
+
+    if (typeof isPrivateBool !== 'boolean') {
+        return res.status(400).json({ message: 'Invalid value for privacy setting. Must be a boolean.' });
+    }
+
+    try {
+        // Find the user by ID
+        const user = await models.User.findOne({ where: { id: userId } });
+
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Update the user's privacy setting
+        user.isPrivate = isPrivateBool; // Set privacy
+        await user.save();
+
+        // Customize the response message based on privacy setting
+        const responseMessage = user.isPrivate
+            ? 'Your account is private'
+            : 'Your account is public';
+
+        return res.status(200).json({ message: responseMessage, isPrivate: user.isPrivate });
+    } catch (error) {
+        console.error('Error updating privacy setting:', error);
+        return res.status(500).json({ message: 'Server error', error: error.message || error });
+    }
+};
 
 module.exports = {
     register,
@@ -279,5 +321,6 @@ module.exports = {
     getProfileById,
     updateUserProfile,
     changePassword,
+    setAccountPrivacy
 
 };

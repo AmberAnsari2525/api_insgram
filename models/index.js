@@ -18,12 +18,13 @@ const Post = require('./post')(sequelize, DataTypes);
 const Comment = require('./comment')(sequelize, DataTypes);
 const Like = require('./like')(sequelize, DataTypes);
 const Share = require('./share')(sequelize, DataTypes);
-const UserFollows = require('./UserFollows')(sequelize, DataTypes); // Import UserFollows model
-
+const UserFollows = require('./UserFollows')(sequelize, DataTypes);
+const Notification = require('./notification')(sequelize, DataTypes); // Import Notification model
 
 // Call associate method on all models
-User.associate({ User, Comment, UserFollows });
+User.associate({ User, Comment, UserFollows, Notification });
 Comment.associate({ User });
+Notification.associate({ User });
 
 // Export the sequelize instance and models separately
 module.exports = {
@@ -35,6 +36,6 @@ module.exports = {
         Like,
         Share,
         UserFollows,
-
+        Notification, // Include Notification model
     },
 };

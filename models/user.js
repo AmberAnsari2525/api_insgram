@@ -1,3 +1,4 @@
+// models/User.js
 module.exports = (sequelize, DataTypes) => {
     const User = sequelize.define('User', {
         id: {
@@ -34,6 +35,11 @@ module.exports = (sequelize, DataTypes) => {
             type: DataTypes.INTEGER,
             defaultValue: 0,
         },
+        // New field for privacy setting
+        isPrivate: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: false, // Default to public
+        },
     }, {
         tableName: 'users',
     });
@@ -52,6 +58,7 @@ module.exports = (sequelize, DataTypes) => {
             foreignKey: 'followerId',
             otherKey: 'followedId',
         });
+
     };
 
     return User;

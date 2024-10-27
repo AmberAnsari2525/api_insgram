@@ -13,6 +13,7 @@ const storage = multer.diskStorage({
         cb(null, uniqueName);
     }
 });
+
 const upload = multer({ storage: storage });
 // Define routes
 router.post('/posts', upload.array('media_link'), authMiddleware, createPost);
@@ -21,6 +22,7 @@ router.get('/posts', authMiddleware, getPosts);
 // // Get a post by ID
 router.get('/posts/:id', authMiddleware, getPostById);
 // // Get posts by user ID
+
 router.get('/user/:user_id/posts', authMiddleware, getPostsByUserId);
 //Update a post by ID
 router.put('/posts/:id', upload.array('media_link'), authMiddleware, updatePost);
