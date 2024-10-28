@@ -1,4 +1,3 @@
-//post.js
 module.exports = (sequelize, DataTypes) => {
     const Post = sequelize.define('Post', {
         user_id: {
@@ -22,12 +21,15 @@ module.exports = (sequelize, DataTypes) => {
             type: DataTypes.STRING,
             allowNull: true,
         },
-
         like_count: {
             type: DataTypes.INTEGER,
-            defaultValue: 0, // Start with 0 likes
+            defaultValue: 0,
             allowNull: false,
         },
     });
+
+    // Define association
+    Post.belongsTo(sequelize.models.User, { foreignKey: 'user_id', as: 'User' });
+
     return Post;
 };

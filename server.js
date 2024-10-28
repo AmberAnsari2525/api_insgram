@@ -7,7 +7,7 @@ const likeRoutes = require('./routes/likeRoutes');
 const shareRoutes = require('./routes/shareRoutes');
 const followRoutes = require('./routes/followRoutes');
 const notificationRoutes = require('./routes/notificationsRoutes');
-
+const storyRoutes=require('./routes/storyRoutes')
 require('dotenv').config();
 const app = express();
 
@@ -24,7 +24,7 @@ app.use('/api', shareRoutes);
 app.use('/api', followRoutes);
 app.use('/api', notificationRoutes);
 app.use('/api/notifications', notificationRoutes);
-
+app.use('/api',storyRoutes);
 const PORT = process.env.PORT || 3000;
 
 sequelize.sync().then(() => {

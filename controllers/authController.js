@@ -159,8 +159,8 @@ const updateUserProfile = async (req, res) => {
 
 
 //get user profile by id
+//get user profile by id
 const getProfileById = async (req, res) => {
-
     // Get userId from the request params
     const userId = req.params.userId;
 
@@ -171,20 +171,22 @@ const getProfileById = async (req, res) => {
     try {
         // Find the user by ID
         const user = await models.User.findOne({
-            where: {id: userId},
-            attributes: ['id', 'username', 'fullName' , 'image', 'createdAt', 'updatedAt']
+            where: { id: userId },
+            attributes: ['id', 'username', 'fullName', 'email', 'image', 'createdAt', 'updatedAt']
         });
 
         if (!user) {
-            return res.status(404).json({message: 'User not found'});
+            return res.status(404).json({ message: 'User not found' });
         }
-        // Return the user profile data
+
+        // Return the user profile data, including full name
         return res.status(200).json({
             status: true,
             user: {
                 id: user.id,
-                name: user.username,
-                fullName:user.fullName,
+                username: user.username,
+                fullName: user.fullName,
+                email: user.email,
                 image: `${req.protocol}://${req.get('host')}/uploads/${user.image}`,
                 created_at: user.createdAt,
                 updated_at: user.updatedAt
@@ -193,20 +195,20 @@ const getProfileById = async (req, res) => {
 
     } catch (error) {
         console.error('Error fetching user profile:', error);
-
-        return res.status(500).json({message: 'Server error', error: error.message || error});
+        return res.status(500).json({ message: 'Server error', error: error.message || error });
     }
 };
 
 
 
 // get all user
+// get all users
 const getUsers = async (req, res) => {
     try {
         // Fetch all users from the database except the logged-in user
         const userId = req.user.id; // Assuming req.user contains the logged-in user's ID
         const users = await models.User.findAll({
-            attributes: ['id', 'username', 'email',  'image',],
+            attributes: ['id', 'username', 'fullName', 'email', 'image'],
             where: {
                 id: { [Op.ne]: userId } // Exclude the logged-in user's data
             }
@@ -222,10 +224,10 @@ const getUsers = async (req, res) => {
             status: true,
             users: users.map(user => ({
                 id: user.id,
-                name: user.username,
+                username: user.username,
+                fullName: user.fullName,
                 email: user.email,
                 image: `${req.protocol}://${req.get('host')}/uploads/${user.image}`, // Construct full image URL here
-
             }))
         });
     } catch (error) {
@@ -233,7 +235,6 @@ const getUsers = async (req, res) => {
         return res.status(500).json({ message: 'Server error', error: error.message || error });
     }
 };
-
 
 
 const changePassword = async (req, res) => {

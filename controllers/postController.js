@@ -2,6 +2,7 @@ const { Post, User, Like } = require('../models').models;
 const { Op } = require('sequelize');
 
 //create post
+// Create post
 exports.createPost = async (req, res) => {
     const { content, post_type } = req.body; // Removed count_likes since it was not used
 
@@ -44,13 +45,11 @@ exports.createPost = async (req, res) => {
     }
 };
 
-// get all post
-// get all post
-// get all post
+
+// Get all posts
 exports.getPosts = async (req, res) => {
-    console.log("GET /api/posts hit");
     try {
-        const userId = req.user.id; // The ID of the user requesting the posts
+        const userId = req.user.id; // Current user ID
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
         const offset = (page - 1) * limit;
@@ -64,36 +63,48 @@ exports.getPosts = async (req, res) => {
         let whereCondition = {};
 
         if (currentUser.isPrivate) {
-            // Get followers' user IDs
-            const followers = await User.findAll({
-                where: {
-                    id: { [Op.ne]: userId }, // Exclude current user
-                    // Assuming you have a UserFollows table to check relationships
-                    [Op.or]: [{ id: { [Op.in]: sequelize.literal(`(SELECT followedId FROM UserFollows WHERE followerId = ${userId})`) } }]
-                },
-                attributes: ['id']
+            // If the account is private, fetch the IDs of the users that the current user is following
+            const following = await models.UserFollows.findAll({
+                where: { followerId: userId },
+                attributes: ['followedId'],
             });
 
-            const followerIds = followers.map(follower => follower.id);
-            whereCondition = { user_id: { [Op.in]: followerIds } }; // Only include posts from followed users
-        } else {
-            // If the user is public, retrieve all posts
-            whereCondition = {};
+            const followingIds = following.map(follow => follow.followedId);
+            followingIds.push(userId); // Include the current user's own posts
+
+            if (followingIds.length === 0) {
+                return res.status(200).json({
+                    currentPage: page,
+                    totalPages: 0,
+                    totalPosts: 0,
+                    posts: [],
+                });
+            }
+
+            // Only include posts from the users that the current user is following
+            whereCondition = { user_id: { [Op.in]: followingIds } };
         }
 
+        // Fetch posts along with user details
         const { count, rows: posts } = await Post.findAndCountAll({
             where: whereCondition,
             limit: limit,
-            offset: offset
+            offset: offset,
+            include: [{
+                model: User,
+                as: 'User', // Use the alias defined in the association
+                attributes: ['username', 'fullName', 'image'], // Include desired user fields
+            }],
         });
 
+        // Format posts for response
         const formattedPosts = posts.map(post => {
             let mediaLinks = [];
             try {
                 mediaLinks = post.media_link ? JSON.parse(post.media_link) : [];
             } catch (err) {
                 console.error('Error parsing media_link for post:', post.id, err);
-                mediaLinks = []; // Default to empty array if parsing fails
+                mediaLinks = [];
             }
 
             const fullMediaLinks = mediaLinks.map(link => `${req.protocol}://${req.get('host')}/uploads/${link}`);
@@ -106,8 +117,11 @@ exports.getPosts = async (req, res) => {
                 media_links: fullMediaLinks,
                 createdAt: post.createdAt,
                 updatedAt: post.updatedAt,
-                username: 'Unknown User', // Placeholder for debugging
-                like_count: 0 // Placeholder for debugging
+                username: post.User ? post.User.username : null, // Safely access user information
+                fullName: post.User ? post.User.fullName : null,
+                user_image: post.User && post.User.image ? `${req.protocol}://${req.get('host')}/uploads/${post.User.image}` : null,
+                like_count: post.like_count || 0, // Placeholder
+                comment_count: post.comment_count || 0 // Include comment count
             };
         });
 
@@ -116,16 +130,18 @@ exports.getPosts = async (req, res) => {
             currentPage: page,
             totalPages: totalPages,
             totalPosts: count,
-            posts: formattedPosts
+            posts: formattedPosts,
         });
     } catch (error) {
         console.error('Failed to retrieve posts:', error.message || error);
         res.status(500).json({
             message: 'Failed to retrieve posts',
-            error: error.message || 'An unknown error occurred'
+            error: error.message || 'An unknown error occurred',
         });
     }
 };
+
+
 
 
 //get post by id
@@ -139,8 +155,9 @@ exports.getPostById = async (req, res) => {
             return res.status(404).json({ message: 'Post not found' });
         }
 
+        // Fetch user information, including full name, username, and image
         const user = await User.findByPk(post.user_id, {
-            attributes: ['username', 'image'],
+            attributes: ['username', 'fullName', 'image'],
         });
 
         let mediaLinks = [];
@@ -162,9 +179,11 @@ exports.getPostById = async (req, res) => {
             media_links: fullMediaLinks,
             createdAt: post.createdAt,
             updatedAt: post.updatedAt,
-            username: user ? user.username : 'Unknown User',
+            username: user.username,
+            fullName: user.fullName,  // Include the full name
             user_image: user ? `${req.protocol}://${req.get('host')}/uploads/${user.image}` : null,
-            like_count: likeCount
+            like_count: likeCount,
+            comment_count: post.comment_count || 0 // Include comment count
         };
 
         res.status(200).json(formattedPost);
@@ -179,25 +198,63 @@ exports.getPostById = async (req, res) => {
 
 
 // Get posts by user ID
+// Get posts by user ID
 exports.getPostsByUserId = async (req, res) => {
     const { user_id } = req.params; // Assuming user_id is passed in the URL params
 
     try {
         // Find all posts where the user_id matches the provided ID
-        const posts = await Post.findAll({ where: { user_id } });
+        const posts = await Post.findAll({
+            where: { user_id },
+            include: [{
+                model: User,
+                as: 'User', // Use the same alias as defined in the Post model association
+                attributes: ['username', 'fullName', 'image'],
+            }],
+        });
 
         // If no posts are found, return a 404 status
         if (posts.length === 0) {
             return res.status(404).json({ message: 'No posts found for this user' });
         }
 
-        // Return the found posts
-        res.status(200).json(posts);
+        // Format the posts to include user information
+        const formattedPosts = posts.map(post => {
+            let mediaLinks = [];
+            try {
+                mediaLinks = post.media_link ? JSON.parse(post.media_link) : [];
+            } catch (err) {
+                console.error('Error parsing media_link for post:', post.id, err);
+                mediaLinks = [];
+            }
+
+            const fullMediaLinks = mediaLinks.map(link => `${req.protocol}://${req.get('host')}/uploads/${link}`);
+
+            return {
+                id: post.id,
+                user_id: post.user_id,
+                post_type: post.post_type,
+                content: post.content,
+                media_links: fullMediaLinks,
+                createdAt: post.createdAt,
+                updatedAt: post.updatedAt,
+                username: post.User ? post.User.username : null, // Safely access user information
+                fullName: post.User ? post.User.fullName : null,
+                user_image: post.User && post.User.image ? `${req.protocol}://${req.get('host')}/uploads/${post.User.image}` : null,
+                like_count: post.like_count || 0, // Placeholder for like count, if needed
+                comment_count: post.comment_count || 0
+
+            };
+        });
+
+        // Return the found posts with user details
+        res.status(200).json(formattedPosts);
     } catch (error) {
         console.error("Error fetching user's posts:", error);
         res.status(500).json({ message: 'Failed to retrieve posts', error });
     }
 };
+
 // Update a post by ID
 
 exports.updatePost = async (req, res) => {

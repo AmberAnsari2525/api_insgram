@@ -1,7 +1,7 @@
+// models/index.js
 const { Sequelize, DataTypes } = require('sequelize');
 require('dotenv').config();
 
-// Setup Sequelize instance
 const sequelize = new Sequelize(
     process.env.DB_NAME,
     process.env.DB_USER,
@@ -12,21 +12,20 @@ const sequelize = new Sequelize(
     }
 );
 
-// Import all models
 const User = require('./user')(sequelize, DataTypes);
 const Post = require('./post')(sequelize, DataTypes);
 const Comment = require('./comment')(sequelize, DataTypes);
 const Like = require('./like')(sequelize, DataTypes);
 const Share = require('./share')(sequelize, DataTypes);
 const UserFollows = require('./UserFollows')(sequelize, DataTypes);
-const Notification = require('./notification')(sequelize, DataTypes); // Import Notification model
+const Notification = require('./notification')(sequelize, DataTypes);
+const Story = require('./story')(sequelize, DataTypes);
 
-// Call associate method on all models
-User.associate({ User, Comment, UserFollows, Notification });
+User.associate({ User, Comment, UserFollows, Notification, Story });
 Comment.associate({ User });
 Notification.associate({ User });
+Story.associate({ User });
 
-// Export the sequelize instance and models separately
 module.exports = {
     sequelize,
     models: {
@@ -36,6 +35,7 @@ module.exports = {
         Like,
         Share,
         UserFollows,
-        Notification, // Include Notification model
+        Notification,
+        Story,
     },
 };
